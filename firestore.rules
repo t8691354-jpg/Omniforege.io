@@ -1,0 +1,239 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 200 &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000));
+    }
+
+    function isValidProject(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.targetPlatform is string && data.targetPlatform.size() <= 60 &&
+             data.status is string && data.status.size() <= 40 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 4000)) &&
+             (!('language' in data) || (data.language is string && data.language.size() <= 50)) &&
+             (!('framework' in data) || (data.framework is string && data.framework.size() <= 50)) &&
+             (!('activeProvider' in data) || (data.activeProvider is string && data.activeProvider.size() <= 50)) &&
+             (!('activeModel' in data) || (data.activeModel is string && data.activeModel.size() <= 80)) &&
+             (!('totalTasks' in data) || data.totalTasks is int) &&
+             (!('completedTasks' in data) || data.completedTasks is int);
+    }
+
+    function isValidApiConnection(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.provider is string && data.provider.size() <= 50 &&
+             data.maskedKey is string && data.maskedKey.size() <= 100 &&
+             data.status is string && data.status.size() <= 40 &&
+             (!('customBaseUrl' in data) || (data.customBaseUrl is string && data.customBaseUrl.size() <= 300)) &&
+             (!('selectedModel' in data) || (data.selectedModel is string && data.selectedModel.size() <= 80)) &&
+             (!('priority' in data) || data.priority is int);
+    }
+
+    function isValidTask(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.projectId is string && data.projectId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.status is string && data.status.size() <= 40 &&
+             data.orderIndex is int &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 4000)) &&
+             (!('outputSummary' in data) || (data.outputSummary is string && data.outputSummary.size() <= 8000)) &&
+             (!('errorMessage' in data) || (data.errorMessage is string && data.errorMessage.size() <= 2000)) &&
+             (!('dependencies' in data) || (data.dependencies is list && data.dependencies.size() <= 50)) &&
+             (!('targetFiles' in data) || (data.targetFiles is list && data.targetFiles.size() <= 100));
+    }
+
+    function isValidCheckpoint(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.projectId is string && data.projectId.size() <= 128 &&
+             data.version is int &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.contextSummary is string && data.contextSummary.size() <= 20000 &&
+             (!('completedTaskCount' in data) || data.completedTaskCount is int) &&
+             (!('fileCount' in data) || data.fileCount is int) &&
+             (!('filesManifestJson' in data) || (data.filesManifestJson is string && data.filesManifestJson.size() <= 50000)) &&
+             (!('lastProvider' in data) || (data.lastProvider is string && data.lastProvider.size() <= 50)) &&
+             (!('lastModel' in data) || (data.lastModel is string && data.lastModel.size() <= 80)) &&
+             (!('status' in data) || (data.status is string && data.status.size() <= 40));
+    }
+
+    function isValidFile(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.projectId is string && data.projectId.size() <= 128 &&
+             data.path is string && data.path.size() > 0 && data.path.size() <= 300 &&
+             data.content is string && data.content.size() <= 100000 &&
+             data.language is string && data.language.size() <= 40 &&
+             (!('sizeBytes' in data) || data.sizeBytes is int) &&
+             (!('version' in data) || data.version is int);
+    }
+
+    function isValidMessage(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.projectId is string && data.projectId.size() <= 128 &&
+             data.role is string && data.role.size() <= 20 &&
+             data.content is string && data.content.size() <= 30000 &&
+             (!('isCheckpointEvent' in data) || data.isCheckpointEvent is bool);
+    }
+
+    // User Profile
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidUserProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming());
+      allow delete: if isOwner(userId);
+
+      // User API Connections
+      match /api_connections/{connectionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(connectionId) &&
+                         incoming().userId == userId &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidApiConnection(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(connectionId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidApiConnection(incoming());
+        allow delete: if isOwner(userId) && isValidId(connectionId);
+      }
+
+      // User Projects
+      match /projects/{projectId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(projectId) &&
+                         incoming().userId == userId &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidProject(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(projectId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidProject(incoming());
+        allow delete: if isOwner(userId) && isValidId(projectId);
+
+        // Project Tasks
+        match /tasks/{taskId} {
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                           isValidId(taskId) &&
+                           incoming().userId == userId &&
+                           incoming().projectId == projectId &&
+                           incoming().createdAt is timestamp &&
+                           incoming().createdAt <= request.time &&
+                           isValidTask(incoming());
+          allow update: if isOwner(userId) &&
+                           isValidId(taskId) &&
+                           incoming().userId == existing().userId &&
+                           incoming().projectId == existing().projectId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidTask(incoming());
+          allow delete: if isOwner(userId) && isValidId(taskId);
+        }
+
+        // Project Checkpoints
+        match /checkpoints/{checkpointId} {
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                           isValidId(checkpointId) &&
+                           incoming().userId == userId &&
+                           incoming().projectId == projectId &&
+                           incoming().createdAt is timestamp &&
+                           incoming().createdAt <= request.time &&
+                           isValidCheckpoint(incoming());
+          allow update: if isOwner(userId) &&
+                           isValidId(checkpointId) &&
+                           incoming().userId == existing().userId &&
+                           incoming().projectId == existing().projectId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidCheckpoint(incoming());
+          allow delete: if isOwner(userId) && isValidId(checkpointId);
+        }
+
+        // Project Source Files
+        match /files/{fileId} {
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                           isValidId(fileId) &&
+                           incoming().userId == userId &&
+                           incoming().projectId == projectId &&
+                           incoming().createdAt is timestamp &&
+                           incoming().createdAt <= request.time &&
+                           isValidFile(incoming());
+          allow update: if isOwner(userId) &&
+                           isValidId(fileId) &&
+                           incoming().userId == existing().userId &&
+                           incoming().projectId == existing().projectId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidFile(incoming());
+          allow delete: if isOwner(userId) && isValidId(fileId);
+        }
+
+        // Project Messages
+        match /messages/{messageId} {
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                           isValidId(messageId) &&
+                           incoming().userId == userId &&
+                           incoming().projectId == projectId &&
+                           incoming().createdAt is timestamp &&
+                           incoming().createdAt <= request.time &&
+                           isValidMessage(incoming());
+          allow update: if isOwner(userId) &&
+                           isValidId(messageId) &&
+                           incoming().userId == existing().userId &&
+                           incoming().projectId == existing().projectId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidMessage(incoming());
+          allow delete: if isOwner(userId) && isValidId(messageId);
+        }
+      }
+    }
+  }
+}

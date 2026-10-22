@@ -1,0 +1,7 @@
+{
+  "name": "OmniForge AI",
+  "description": "Universal AI Software Factory with multi-API continuity, checkpoint-and-resume engine, and autonomous project building.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

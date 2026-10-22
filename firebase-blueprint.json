@@ -1,0 +1,175 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile in OmniForge AI",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "displayName", "email", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Autonomous software project created in OmniForge AI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "targetPlatform": { "type": "string" },
+        "language": { "type": "string" },
+        "framework": { "type": "string" },
+        "status": { "type": "string" },
+        "activeProvider": { "type": "string" },
+        "activeModel": { "type": "string" },
+        "currentTaskId": { "type": "string" },
+        "totalTasks": { "type": "integer" },
+        "completedTasks": { "type": "integer" },
+        "lastCheckpointId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "targetPlatform", "status", "createdAt"]
+    },
+    "ApiConnection": {
+      "title": "ApiConnection",
+      "description": "User-configured AI provider API connection",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "provider": { "type": "string" },
+        "maskedKey": { "type": "string" },
+        "keyHash": { "type": "string" },
+        "customBaseUrl": { "type": "string" },
+        "selectedModel": { "type": "string" },
+        "status": { "type": "string" },
+        "lastError": { "type": "string" },
+        "priority": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "provider", "maskedKey", "status", "createdAt"]
+    },
+    "DevelopmentTask": {
+      "title": "DevelopmentTask",
+      "description": "Trackable development task in a project execution plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "orderIndex": { "type": "integer" },
+        "status": { "type": "string" },
+        "providerUsed": { "type": "string" },
+        "modelUsed": { "type": "string" },
+        "dependencies": { "type": "array" },
+        "outputSummary": { "type": "string" },
+        "targetFiles": { "type": "array" },
+        "errorMessage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "projectId", "title", "orderIndex", "status", "createdAt"]
+    },
+    "Checkpoint": {
+      "title": "Checkpoint",
+      "description": "Snapshot checkpoint for project continuity across API keys",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "version": { "type": "integer" },
+        "title": { "type": "string" },
+        "completedTaskCount": { "type": "integer" },
+        "completedTaskIds": { "type": "array" },
+        "pendingTaskIds": { "type": "array" },
+        "interruptedTaskId": { "type": "string" },
+        "fileCount": { "type": "integer" },
+        "filesManifestJson": { "type": "string" },
+        "contextSummary": { "type": "string" },
+        "lastProvider": { "type": "string" },
+        "lastModel": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "projectId", "version", "title", "contextSummary", "createdAt"]
+    },
+    "ProjectFile": {
+      "title": "ProjectFile",
+      "description": "Source file in a project workspace",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "path": { "type": "string" },
+        "content": { "type": "string" },
+        "language": { "type": "string" },
+        "sizeBytes": { "type": "integer" },
+        "version": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "projectId", "path", "content", "language", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Conversation message in the AI project workspace",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "role": { "type": "string" },
+        "content": { "type": "string" },
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "isCheckpointEvent": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "projectId", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile metadata"
+    },
+    "/users/{userId}/api_connections/{connectionId}": {
+      "schema": "ApiConnection",
+      "description": "User API credentials and connections"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Software projects authored by user"
+    },
+    "/users/{userId}/projects/{projectId}/tasks/{taskId}": {
+      "schema": "DevelopmentTask",
+      "description": "Tasks within a project plan"
+    },
+    "/users/{userId}/projects/{projectId}/checkpoints/{checkpointId}": {
+      "schema": "Checkpoint",
+      "description": "Project checkpoints for multi-API failover and continuity"
+    },
+    "/users/{userId}/projects/{projectId}/files/{fileId}": {
+      "schema": "ProjectFile",
+      "description": "Generated and modified source files"
+    },
+    "/users/{userId}/projects/{projectId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Chat log between user and AI orchestration"
+    }
+  }
+}
